@@ -16,18 +16,42 @@ authentication_token=args.authentication_token
 now = datetime.now()
 timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
 
-url = f"https://api.jinka.fr/apiv2/alert/{alert_id}/dashboard?filter=all&page=1&rrkey=xdwna9&sorting="
+def get_alert_ads_from_page(page_index):
+    url = f"https://api.jinka.fr/apiv2/alert/{alert_id}/dashboard?filter=all&page={page_index}&rrkey=xdwna9&sorting="
 
-headers = {
-    "accept": "*/*",
-    "accept-language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
-    "authorization":
-        f"Bearer {authentication_token}",
+    headers = {
+        "accept": "*/*",
+        "accept-language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
+        "authorization":
+            f"Bearer {authentication_token}",
 
-}
-response = requests.get(url, headers=headers)
+    }
+    response = requests.get(url, headers=headers)
 
-data = response.json()
+    return response.json()
 
-with open(f"data/jinka-{timestamp}.json", "a") as f:
-    json.dump(data, f)
+def get_last_page_index():
+    first_page_response = get_alert_ads_from_page(1)
+    
+    return first_page_response['pagination']['nbPages']
+
+def main():
+    print(f"Scraping Jinka for the alert {alert_id}...")
+    last_page_index = get_last_page_index()
+    print(f"{last_page_index} pages found !")
+    ads = []
+
+    for current_page_index in range (1, last_page_index + 1):
+        print("Looping through page: ", current_page_index)
+        current_page_data = get_alert_ads_from_page(current_page_index)
+        current_page_ads = current_page_data['ads']
+        ads = ads + current_page_ads
+
+    output_file_name = f"data/jinka-{timestamp}.json"
+    print(f"Saving to: {output_file_name}")
+    pretty_json = json.dumps(ads, indent=4)
+
+    with open(output_file_name, "a") as f:
+        f.write(pretty_json)
+
+main()
